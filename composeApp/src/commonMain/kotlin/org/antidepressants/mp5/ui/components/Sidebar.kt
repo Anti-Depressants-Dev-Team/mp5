@@ -1,64 +1,162 @@
 package org.antidepressants.mp5.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
+/**
+ * Navigation destination for the sidebar.
+ */
+enum class NavigationDestination(
+    val title: String,
+    val icon: ImageVector
+) {
+    HOME("Home", Icons.Default.Home),
+    SEARCH("Search", Icons.Default.Search),
+    PLAYLISTS("Playlists", Icons.Default.PlaylistPlay)
+}
+
+/**
+ * Sidebar navigation component with glassmorphism effect.
+ * 
+ * Structure:
+ * - Top: App logo/title
+ * - Middle: Navigation items (Home, Search, Playlists)
+ * - Bottom: Settings (pinned)
+ */
 @Composable
 fun Sidebar(
+    currentDestination: NavigationDestination = NavigationDestination.HOME,
+    onNavigate: (NavigationDestination) -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Surface(
         modifier = modifier
-            .width(80.dp)
-            .fillMaxHeight()
-            .background(MaterialTheme.colors.background.copy(alpha = 0.8f)) // Semi-transparent sidebar
-            .padding(vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+            .width(240.dp)
+            .fillMaxHeight(),
+        color = Color.Black.copy(alpha = 0.4f),
+        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
     ) {
-        // Top Navigation items
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colors.primary.copy(alpha = 0.2f),
+                            Color.Transparent,
+                            MaterialTheme.colors.primary.copy(alpha = 0.1f)
+                        )
+                    )
+                )
         ) {
-            SidebarItem(icon = Icons.Default.Home, label = "Home", selected = true)
-            SidebarItem(icon = Icons.Default.Search, label = "Search")
-            SidebarItem(icon = Icons.Default.List, label = "Playlists")
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                // App title/logo
+                Text(
+                    text = "Psychopath",
+                    style = MaterialTheme.typography.h2.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    ),
+                    color = MaterialTheme.colors.primary,
+                    modifier = Modifier.padding(bottom = 32.dp)
+                )
+                
+                // Navigation items
+                NavigationDestination.entries.forEach { destination ->
+                    SidebarItem(
+                        title = destination.title,
+                        icon = destination.icon,
+                        isSelected = currentDestination == destination,
+                        onClick = { onNavigate(destination) }
+                    )
+                }
+                
+                // Spacer to push settings to bottom
+                Spacer(modifier = Modifier.weight(1f))
+                
+                // Settings (pinned to bottom)
+                Divider(
+                    color = Color.White.copy(alpha = 0.1f),
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+                
+                SidebarItem(
+                    title = "Settings",
+                    icon = Icons.Default.Settings,
+                    isSelected = false,
+                    onClick = onSettingsClick
+                )
+            }
         }
-
-        // Bottom - Settings
-        SidebarItem(icon = Icons.Default.Settings, label = "Settings")
     }
 }
 
 @Composable
-fun SidebarItem(
+private fun SidebarItem(
+    title: String,
     icon: ImageVector,
-    label: String,
-    selected: Boolean = false,
-    onClick: () -> Unit = {}
+    isSelected: Boolean,
+    onClick: () -> Unit
 ) {
-    IconButton(onClick = onClick) {
+    val backgroundColor = if (isSelected) {
+        MaterialTheme.colors.primary.copy(alpha = 0.2f)
+    } else {
+        Color.Transparent
+    }
+    
+    val contentColor = if (isSelected) {
+        MaterialTheme.colors.primary
+    } else {
+        Color.White.copy(alpha = 0.7f)
+    }
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Icon(
             imageVector = icon,
-            contentDescription = label,
-            tint = if (selected) MaterialTheme.colors.primary else MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
-            modifier = Modifier.size(28.dp)
+            contentDescription = title,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        Text(
+            text = title,
+            style = MaterialTheme.typography.body1.copy(
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+            ),
+            color = contentColor
         )
     }
 }

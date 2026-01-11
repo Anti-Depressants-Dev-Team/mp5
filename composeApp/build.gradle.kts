@@ -1,3 +1,6 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
@@ -8,10 +11,8 @@ plugins {
 
 kotlin {
     androidTarget {
-        compilations.all {
-            kotlinOptions {
-                jvmTarget = "1.8"
-            }
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
         }
     }
     
@@ -25,34 +26,53 @@ kotlin {
             implementation(libs.androidx.appcompat)
             implementation(libs.androidx.core.ktx)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.kotlinx.coroutines.android)
+            implementation(libs.koin.android)
+            implementation(libs.koin.androidx.compose)
+            
+            // Media3 (ExoPlayer) for Android audio
+            implementation(libs.bundles.media3)
+            
+            // NewPipeExtractor for YouTube without API
+            implementation(libs.newpipe.extractor)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material)
+            implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             
-            implementation(libs.ktor.client.core)
-            implementation(libs.ktor.serialization.kotlinx.json)
-            implementation(libs.ktor.client.content.negotiation)
+            // Networking
+            implementation(libs.bundles.ktor)
             
             implementation(libs.kotlinx.coroutines.core)
             
-            implementation(libs.decompose)
-            implementation(libs.decompose.extensions.compose)
+            // Navigation - Voyager
+            implementation(libs.bundles.voyager)
             
+            // Image Loading - Coil 3
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
             
+            // DI - Koin (core only for common)
             implementation(libs.koin.core)
-            implementation(libs.koin.compose)
+            
+            // Settings - Multiplatform Settings
+            implementation(libs.bundles.settings)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
             implementation(libs.ktor.client.okhttp)
+            
+            // VLCJ for Desktop audio
+            implementation(libs.vlcj)
+            
+            // NewPipeExtractor for YouTube without API
+            implementation(libs.newpipe.extractor)
         }
     }
 }
@@ -83,8 +103,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     dependencies {
         debugImplementation(libs.compose.ui.tooling)
