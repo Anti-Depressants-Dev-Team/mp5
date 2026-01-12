@@ -52,7 +52,7 @@ fun Sidebar(
         modifier = modifier
             .width(240.dp)
             .fillMaxHeight(),
-        color = Color.Black.copy(alpha = 0.4f),
+        color = MaterialTheme.colors.surface,
         shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
     ) {
         Box(
@@ -61,9 +61,9 @@ fun Sidebar(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            MaterialTheme.colors.primary.copy(alpha = 0.2f),
+                            MaterialTheme.colors.primary.copy(alpha = 0.15f),
                             Color.Transparent,
-                            MaterialTheme.colors.primary.copy(alpha = 0.1f)
+                            MaterialTheme.colors.primary.copy(alpha = 0.05f)
                         )
                     )
                 )

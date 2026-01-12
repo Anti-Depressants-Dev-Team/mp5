@@ -1,6 +1,7 @@
 package org.antidepressants.mp5.player
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,8 +31,8 @@ class PlayerController {
         }
     }
     
-    fun loadTrack(track: Track, streamUrl: String) {
-        _playerState.update { 
+    fun loadTrack(track: Track, streamUrl: String, autoPlay: Boolean = true) {
+        _playerState.update {
             it.copy(
                 currentTrack = track,
                 playbackState = PlaybackState.LOADING
@@ -39,6 +40,11 @@ class PlayerController {
         }
         scope.launch {
             audioPlayer?.load(track, streamUrl)
+            if (autoPlay) {
+                // Small delay to ensure media is loaded
+                delay(500)
+                play()
+            }
         }
     }
     

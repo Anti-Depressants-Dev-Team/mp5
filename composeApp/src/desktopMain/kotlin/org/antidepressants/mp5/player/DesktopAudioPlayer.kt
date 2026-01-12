@@ -67,13 +67,31 @@ class DesktopAudioPlayer : AudioPlayer {
             }
             
             override fun finished(mediaPlayer: MediaPlayer) {
-                _playerState.update { 
-                    it.copy(
-                        playbackState = PlaybackState.ENDED,
-                        currentPosition = _playerState.value.duration
-                    )
+                val currentState = _playerState.value
+
+                // Handle repeat modes
+                when (currentState.repeatMode) {
+                    RepeatMode.ONE -> {
+                        // Repeat current track
+                        mediaPlayer.controls().play()
+                        _playerState.update { it.copy(currentPosition = 0) }
+                    }
+                    RepeatMode.ALL -> {
+                        // For now, just replay current track (TODO: playlist support)
+                        mediaPlayer.controls().play()
+                        _playerState.update { it.copy(currentPosition = 0) }
+                    }
+                    RepeatMode.OFF -> {
+                        // Just mark as ended
+                        _playerState.update {
+                            it.copy(
+                                playbackState = PlaybackState.ENDED,
+                                currentPosition = currentState.duration
+                            )
+                        }
+                        stopPositionUpdates()
+                    }
                 }
-                stopPositionUpdates()
             }
             
             override fun error(mediaPlayer: MediaPlayer) {

@@ -20,6 +20,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import org.antidepressants.mp5.auth.GlobalAuthManager
+import org.antidepressants.mp5.domain.model.AuthState
 import org.antidepressants.mp5.settings.GlobalSettings
 
 /**
@@ -43,7 +46,12 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
-    
+    val scope = rememberCoroutineScope()
+
+    // Auth state
+    val authManager = remember { GlobalAuthManager.instance }
+    val authState by authManager.authState.collectAsState()
+
     // Local state that syncs with GlobalSettings
     var isDarkMode by remember { mutableStateOf(GlobalSettings.settings.isDarkMode) }
     var isPlayerTop by remember { mutableStateOf(GlobalSettings.settings.isPlayerTop) }
@@ -156,7 +164,148 @@ fun SettingsScreen(
         }
         
         Spacer(modifier = Modifier.height(24.dp))
-        
+
+        // === ACCOUNT SECTION ===
+        SettingsSection(title = "Account") {
+            when (authState) {
+                is AuthState.Unauthenticated -> {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Not signed in",
+                                    style = MaterialTheme.typography.subtitle1,
+                                    color = MaterialTheme.colors.onSurface
+                                )
+                                Text(
+                                    "Sign in to sync playlists with Google",
+                                    style = MaterialTheme.typography.caption,
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    authManager.signInWithGoogle()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = Color(0xFF4285F4), // Google Blue
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Sign in with Google")
+                        }
+                    }
+                }
+                is AuthState.Loading -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Signing in...",
+                            style = MaterialTheme.typography.body2,
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+                is AuthState.Authenticated -> {
+                    val user = (authState as AuthState.Authenticated).user
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    user.displayName,
+                                    style = MaterialTheme.typography.subtitle1,
+                                    color = MaterialTheme.colors.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    user.email,
+                                    style = MaterialTheme.typography.caption,
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            "✓ Cloud sync enabled",
+                            style = MaterialTheme.typography.caption,
+                            color = MaterialTheme.colors.primary
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = { authManager.signOut() },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colors.error
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Sign Out")
+                        }
+                    }
+                }
+                is AuthState.Error -> {
+                    Column {
+                        Text(
+                            "Sign in failed",
+                            style = MaterialTheme.typography.subtitle1,
+                            color = MaterialTheme.colors.error
+                        )
+                        Text(
+                            (authState as AuthState.Error).message,
+                            style = MaterialTheme.typography.caption,
+                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    authManager.signInWithGoogle()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = MaterialTheme.colors.primary,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Try Again")
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         // === INTEGRATIONS SECTION ===
         SettingsSection(title = "Integrations (Coming Soon)") {
             SettingsSwitch(
@@ -206,9 +355,9 @@ private fun SettingsSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.5f),
+        backgroundColor = MaterialTheme.colors.surface,
         shape = RoundedCornerShape(16.dp),
-        elevation = 0.dp
+        elevation = 2.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp)

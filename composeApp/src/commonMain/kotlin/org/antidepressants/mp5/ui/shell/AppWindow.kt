@@ -13,6 +13,8 @@ import org.antidepressants.mp5.ui.components.NavigationDestination
 import org.antidepressants.mp5.ui.components.PsychopathPlayer
 import org.antidepressants.mp5.ui.components.Sidebar
 import org.antidepressants.mp5.ui.screens.SettingsScreen
+import org.antidepressants.mp5.ui.screens.SearchScreen
+import org.antidepressants.mp5.ui.screens.PlaylistScreen
 
 @Composable
 fun AppWindow() {
@@ -59,8 +61,8 @@ fun AppWindow() {
                 } else {
                     when (currentDestination) {
                         NavigationDestination.HOME -> HomeContent()
-                        NavigationDestination.SEARCH -> SearchContent()
-                        NavigationDestination.PLAYLISTS -> PlaylistsContent()
+                        NavigationDestination.SEARCH -> SearchScreen()
+                        NavigationDestination.PLAYLISTS -> PlaylistScreen()
                     }
                 }
             }

@@ -1,6 +1,5 @@
 package org.antidepressants.mp5.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
@@ -10,18 +9,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import org.antidepressants.mp5.settings.GlobalSettings
 
+/**
+ * Dark color palette with ACTUAL dark backgrounds
+ */
 private val DarkColorPalette = darkColors(
     primary = PrimaryPurple,
     primaryVariant = PrimaryPurpleVariant,
     secondary = SecondaryTeal,
-    background = DeepGlass,
-    surface = GlassSurface,
+    background = DarkBackground,       // #0D0D0D - near black
+    surface = DarkSurface,             // #1A1A1A - dark gray
     onPrimary = TextWhite,
     onSecondary = TextWhite,
     onBackground = TextWhite,
     onSurface = TextWhite,
 )
 
+/**
+ * Light color palette
+ */
 private val LightColorPalette = lightColors(
     primary = Purple40,
     primaryVariant = PurpleGrey40,
@@ -30,8 +35,8 @@ private val LightColorPalette = lightColors(
     surface = Color(0xFFFFFFFF),
     onPrimary = Color.White,
     onSecondary = Color.Black,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
+    onBackground = TextDark,
+    onSurface = TextDark,
 )
 
 /**
