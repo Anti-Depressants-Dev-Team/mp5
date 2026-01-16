@@ -3,6 +3,9 @@
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import org.antidepressants.mp5.domain.model.Playlist
 import org.antidepressants.mp5.domain.model.Track
 import org.antidepressants.mp5.domain.repository.PlaylistRepository
@@ -13,76 +16,67 @@ import java.util.UUID
  * For MVP - will be replaced with Room Database later.
  */
 class InMemoryPlaylistRepository : PlaylistRepository {
-    
-    private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
-    
-    override fun getAllPlaylists(): Flow<List<Playlist>> = _playlists.asStateFlow()
-    
+
+    private val _playlists = MutableStateFlow<Map<String, Playlist>>(emptyMap())
+
+    override fun getAllPlaylists(): Flow<List<Playlist>> = _playlists.asStateFlow().map { it.values.toList() }
+
     override suspend fun getPlaylist(id: String): Playlist? {
-        return _playlists.value.find { it.id == id }
+        return _playlists.value[id]
     }
-    
+
     override suspend fun createPlaylist(name: String, description: String?, isCloud: Boolean): Playlist {
         val newPlaylist = Playlist(
             id = UUID.randomUUID().toString(),
             name = name,
             description = description,
             isCloud = isCloud,
-            tracks = emptyList()
+            tracks = persistentListOf()
         )
-        _playlists.value = _playlists.value + newPlaylist
+        _playlists.value = _playlists.value + (newPlaylist.id to newPlaylist)
         return newPlaylist
     }
-    
+
     override suspend fun updatePlaylist(playlist: Playlist) {
-        _playlists.value = _playlists.value.map { 
-            if (it.id == playlist.id) playlist.copy(updatedAt = System.currentTimeMillis()) else it 
+        if (_playlists.value.containsKey(playlist.id)) {
+            _playlists.value = _playlists.value + (playlist.id to playlist.copy(updatedAt = System.currentTimeMillis()))
         }
     }
-    
+
     override suspend fun deletePlaylist(id: String) {
-        _playlists.value = _playlists.value.filter { it.id != id }
+        _playlists.value = _playlists.value - id
     }
-    
+
     override suspend fun addTrackToPlaylist(playlistId: String, track: Track) {
-        _playlists.value = _playlists.value.map { playlist ->
-            if (playlist.id == playlistId) {
-                playlist.copy(
-                    tracks = playlist.tracks + track,
-                    updatedAt = System.currentTimeMillis()
-                )
-            } else {
-                playlist
-            }
+        _playlists.value[playlistId]?.let { playlist ->
+            val updatedPlaylist = playlist.copy(
+                tracks = playlist.tracks.add(track)
+            )
+            updatePlaylist(updatedPlaylist)
         }
     }
-    
+
     override suspend fun removeTrackFromPlaylist(playlistId: String, trackId: String) {
-        _playlists.value = _playlists.value.map { playlist ->
-            if (playlist.id == playlistId) {
-                playlist.copy(
-                    tracks = playlist.tracks.filter { it.id != trackId },
-                    updatedAt = System.currentTimeMillis()
+        _playlists.value[playlistId]?.let { playlist ->
+            val trackToRemove = playlist.tracks.find { it.id == trackId }
+            if (trackToRemove != null) {
+                val updatedPlaylist = playlist.copy(
+                    tracks = playlist.tracks.remove(trackToRemove)
                 )
-            } else {
-                playlist
+                updatePlaylist(updatedPlaylist)
             }
         }
     }
-    
+
     override suspend fun reorderTracks(playlistId: String, fromIndex: Int, toIndex: Int) {
-        _playlists.value = _playlists.value.map { playlist ->
-            if (playlist.id == playlistId) {
-                val mutableTracks = playlist.tracks.toMutableList()
-                val track = mutableTracks.removeAt(fromIndex)
-                mutableTracks.add(toIndex, track)
-                playlist.copy(
-                    tracks = mutableTracks,
-                    updatedAt = System.currentTimeMillis()
-                )
-            } else {
-                playlist
-            }
+        _playlists.value[playlistId]?.let { playlist ->
+            val mutableTracks = playlist.tracks.builder()
+            val track = mutableTracks.removeAt(fromIndex)
+            mutableTracks.add(toIndex, track)
+            val updatedPlaylist = playlist.copy(
+                tracks = mutableTracks.build()
+            )
+            updatePlaylist(updatedPlaylist)
         }
     }
 }

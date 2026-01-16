@@ -62,6 +62,9 @@ kotlin {
             
             // Settings - Multiplatform Settings
             implementation(libs.bundles.settings)
+
+            // Kotlinx Collections Immutable
+            implementation(libs.kotlinx.collections.immutable)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
