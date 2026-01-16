@@ -10,9 +10,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import org.antidepressants.mp5.player.DemoPlayer
 import org.antidepressants.mp5.player.PlaybackState
 import org.antidepressants.mp5.player.RepeatMode
@@ -199,21 +201,59 @@ fun PsychopathPlayer(
                 )
             }
             
-            // Volume button
-            IconButton(
-                onClick = { showVolumePopup = !showVolumePopup },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    when {
-                        playerState.volumeLevel == 0f -> Icons.Default.VolumeOff
-                        playerState.volumeLevel < 0.5f -> Icons.Default.VolumeDown
-                        else -> Icons.Default.VolumeUp
-                    },
-                    "Volume",
-                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
-                    modifier = Modifier.size(22.dp)
-                )
+            // Volume button with Popup
+            Box {
+                IconButton(
+                    onClick = { showVolumePopup = !showVolumePopup },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        when {
+                            playerState.volumeLevel == 0f -> Icons.Default.VolumeOff
+                            playerState.volumeLevel < 0.5f -> Icons.Default.VolumeDown
+                            else -> Icons.Default.VolumeUp
+                        },
+                        "Volume",
+                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                if (showVolumePopup) {
+                    Popup(
+                        alignment = Alignment.TopCenter,
+                        onDismissRequest = { showVolumePopup = false }
+                    ) {
+                        Surface(
+                            elevation = 4.dp,
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colors.surface,
+                            modifier = Modifier
+                                .padding(bottom = 12.dp)
+                                .offset(y = (-150).dp) // Move up above the button
+                                .width(48.dp)
+                                .height(140.dp)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Slider(
+                                    value = playerState.volumeLevel,
+                                    onValueChange = { DemoPlayer.controller.setVolume(it) },
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = MaterialTheme.colors.primary,
+                                        activeTrackColor = MaterialTheme.colors.primary,
+                                        inactiveTrackColor = MaterialTheme.colors.onSurface.copy(alpha = 0.2f)
+                                    ),
+                                    modifier = Modifier
+                                        .width(120.dp)
+                                        .rotate(-90f)
+                                )
+                            }
+                        }
+                    }
+                }
             }
             
             // Volume Boost button (quick access!)
@@ -252,11 +292,6 @@ fun PsychopathPlayer(
                 }
             }
         }
-    }
-    
-    // Volume popup (optional enhancement)
-    if (showVolumePopup) {
-        // TODO: Add volume slider popup
     }
 }
 
