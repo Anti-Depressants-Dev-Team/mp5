@@ -114,9 +114,10 @@ fun PlaylistScreen(
     
     // Create playlist dialog
     if (showCreateDialog) {
-        CreatePlaylistDialog(
+        PlaylistDialog(
+            title = "Create Playlist",
             onDismiss = { showCreateDialog = false },
-            onCreate = { name, description, isCloud ->
+            onConfirm = { name, description, isCloud ->
                 scope.launch {
                     repository.createPlaylist(name, description, isCloud)
                     showCreateDialog = false
@@ -210,17 +211,23 @@ private fun PlaylistCard(
 }
 
 @Composable
-private fun CreatePlaylistDialog(
+private fun PlaylistDialog(
+    title: String,
+    initialName: String = "",
+    initialDescription: String = "",
+    initialIsCloud: Boolean = false,
+    isCloudEditable: Boolean = true,
+    confirmButtonText: String = "Create",
     onDismiss: () -> Unit,
-    onCreate: (name: String, description: String?, isCloud: Boolean) -> Unit
+    onConfirm: (name: String, description: String?, isCloud: Boolean) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var isCloud by remember { mutableStateOf(false) }
-    
+    var name by remember { mutableStateOf(initialName) }
+    var description by remember { mutableStateOf(initialDescription) }
+    var isCloud by remember { mutableStateOf(initialIsCloud) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create Playlist") },
+        title = { Text(title) },
         text = {
             Column {
                 OutlinedTextField(
@@ -241,11 +248,14 @@ private fun CreatePlaylistDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { isCloud = !isCloud }
+                    modifier = Modifier.clickable(enabled = isCloudEditable) {
+                        if (isCloudEditable) isCloud = !isCloud
+                    }
                 ) {
                     Checkbox(
                         checked = isCloud,
-                        onCheckedChange = { isCloud = it }
+                        onCheckedChange = if (isCloudEditable) { c -> isCloud = c } else null,
+                        enabled = isCloudEditable
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
@@ -263,12 +273,12 @@ private fun CreatePlaylistDialog(
             Button(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onCreate(name, description.takeIf { it.isNotBlank() }, isCloud)
+                        onConfirm(name, description.takeIf { it.isNotBlank() }, isCloud)
                     }
                 },
                 enabled = name.isNotBlank()
             ) {
-                Text("Create")
+                Text(confirmButtonText)
             }
         },
         dismissButton = {
@@ -286,6 +296,25 @@ private fun PlaylistDetailView(
     onDismiss: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    if (showEditDialog) {
+        PlaylistDialog(
+            title = "Edit Playlist",
+            initialName = playlist.name,
+            initialDescription = playlist.description ?: "",
+            initialIsCloud = playlist.isCloud,
+            isCloudEditable = false,
+            confirmButtonText = "Save",
+            onDismiss = { showEditDialog = false },
+            onConfirm = { name, description, _ ->
+                scope.launch {
+                    repository.updatePlaylist(playlist.copy(name = name, description = description))
+                    showEditDialog = false
+                }
+            }
+        )
+    }
     
     // Full screen overlay
     Box(
@@ -309,7 +338,7 @@ private fun PlaylistDetailView(
                     style = MaterialTheme.typography.h5,
                     fontWeight = FontWeight.Bold
                 )
-                IconButton(onClick = { /* TODO: Edit */ }) {
+                IconButton(onClick = { showEditDialog = true }) {
                     Icon(Icons.Default.Edit, "Edit")
                 }
             }
