@@ -3,6 +3,7 @@
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import org.antidepressants.mp5.domain.model.AuthState
 import org.antidepressants.mp5.domain.model.User
 
@@ -14,8 +15,20 @@ import org.antidepressants.mp5.domain.model.User
  */
 class AuthManager {
     
+    private val provider = getGoogleAuthProvider()
+    
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
+    
+    init {
+        // Try to restore session on startup
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+            val user = provider.restoreSession()
+            if (user != null) {
+                _authState.value = AuthState.Authenticated(user)
+            }
+        }
+    }
     
     /**
      * Initiate Google OAuth login flow.
@@ -25,23 +38,14 @@ class AuthManager {
         _authState.value = AuthState.Loading
         
         return try {
-            // TODO: Platform-specific OAuth implementation
-            // Desktop: Open browser with OAuth URL, listen for callback
-            // Android: Use Google Sign-In SDK
-            
-            // For now, return a mock user for testing
-            val mockUser = User(
-                id = "mock-user-id",
-                email = "user@example.com",
-                displayName = "Test User",
-                photoUrl = null,
-                accessToken = "mock-access-token",
-                refreshToken = "mock-refresh-token",
-                tokenExpiresAt = System.currentTimeMillis() + (3600 * 1000)
-            )
-            
-            _authState.value = AuthState.Authenticated(mockUser)
-            Result.success(mockUser)
+            val result = provider.signIn()
+            result.onSuccess { user ->
+                _authState.value = AuthState.Authenticated(user)
+            }.onFailure { error ->
+                val errorMessage = "Login failed: ${error.message}"
+                _authState.value = AuthState.Error(errorMessage)
+            }
+            result
         } catch (e: Exception) {
             val errorMessage = "Login failed: ${e.message}"
             _authState.value = AuthState.Error(errorMessage)
@@ -53,7 +57,10 @@ class AuthManager {
      * Sign out the current user.
      */
     fun signOut() {
-        _authState.value = AuthState.Unauthenticated
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
+            provider.signOut()
+            _authState.value = AuthState.Unauthenticated
+        }
     }
     
     /**
@@ -64,6 +71,17 @@ class AuthManager {
             is AuthState.Authenticated -> state.user
             else -> null
         }
+    }
+    
+    /**
+     * Sync playlists from the authenticated Google account.
+     * Returns success with count of synced playlists, or failure.
+     */
+    suspend fun syncPlaylists(): Result<Int> {
+        val user = getCurrentUser() ?: return Result.failure(Exception("Not authenticated"))
+        val repo = org.antidepressants.mp5.data.repository.GlobalPlaylistRepository.instance
+        val syncManager = org.antidepressants.mp5.data.sync.YouTubeSyncManager(repo)
+        return syncManager.syncPlaylists(user.accessToken)
     }
 }
 

@@ -49,4 +49,10 @@ interface PlaylistRepository {
      * Reorder tracks in playlist.
      */
     suspend fun reorderTracks(playlistId: String, fromIndex: Int, toIndex: Int)
+    
+    /**
+     * Import a playlist (e.g. from YouTube sync).
+     * Should update existing playlist if ID matches, or create new.
+     */
+    suspend fun importPlaylist(playlist: Playlist)
 }

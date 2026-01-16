@@ -29,7 +29,9 @@ data class PlayerState(
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val volumeLevel: Float = 1.0f, // 0.0 to 1.0 (pre-boost)
     val volumeBoost: Float = 1.0f, // 1.0 to 2.0 (boost multiplier)
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val currentLyrics: org.antidepressants.mp5.data.lyrics.Lyrics? = null,
+    val isLoadingLyrics: Boolean = false
 )
 
 /**

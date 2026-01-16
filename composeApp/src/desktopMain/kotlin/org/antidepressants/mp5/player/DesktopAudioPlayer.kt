@@ -73,8 +73,14 @@ class DesktopAudioPlayer : AudioPlayer {
                 when (currentState.repeatMode) {
                     RepeatMode.ONE -> {
                         // Repeat current track
-                        mediaPlayer.controls().play()
-                        _playerState.update { it.copy(currentPosition = 0) }
+                        // Launch coroutine to handle restart asynchronously and avoid callback race conditions
+                        scope.launch {
+                            delay(100) // Give VLC a moment to settle
+                            mediaPlayer.controls().play()
+                            delay(50) // Wait for play to engage
+                            mediaPlayer.controls().setPosition(0f)
+                            _playerState.update { it.copy(currentPosition = 0) }
+                        }
                     }
                     RepeatMode.ALL -> {
                         // For now, just replay current track (TODO: playlist support)
@@ -131,6 +137,10 @@ class DesktopAudioPlayer : AudioPlayer {
     }
     
     override suspend fun load(track: Track, streamUrl: String) {
+        // Stop any existing playback
+        mediaPlayer?.controls()?.stop()
+        stopPositionUpdates()
+        
         _playerState.update { 
             it.copy(
                 currentTrack = track,
@@ -141,15 +151,20 @@ class DesktopAudioPlayer : AudioPlayer {
         }
         
         try {
-            mediaPlayer?.media()?.prepare(streamUrl)
-            println("[DesktopAudioPlayer] Loaded: ${track.title}")
+            // Use media().play() to load and start playing immediately
+            val success = mediaPlayer?.media()?.play(streamUrl) ?: false
+            if (success) {
+                println("[DesktopAudioPlayer] Playing: ${track.title}")
+            } else {
+                println("[DesktopAudioPlayer] Failed to play: ${track.title}")
+                _playerState.update { 
+                    it.copy(playbackState = PlaybackState.ERROR, errorMessage = "Failed to play stream")
+                }
+            }
         } catch (e: Exception) {
             println("[DesktopAudioPlayer] Load error: ${e.message}")
             _playerState.update { 
-                it.copy(
-                    playbackState = PlaybackState.ERROR,
-                    errorMessage = "Failed to load: ${e.message}"
-                )
+                it.copy(playbackState = PlaybackState.ERROR, errorMessage = "Failed to load: ${e.message}")
             }
         }
     }

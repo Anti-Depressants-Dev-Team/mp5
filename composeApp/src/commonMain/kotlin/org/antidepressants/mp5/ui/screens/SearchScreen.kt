@@ -22,11 +22,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.antidepressants.mp5.data.provider.YouTubeProvider
+import org.antidepressants.mp5.data.repository.MusicRepository
 import org.antidepressants.mp5.data.repository.GlobalPlaylistRepository
 import org.antidepressants.mp5.domain.model.Playlist
 import org.antidepressants.mp5.domain.model.Track
 import org.antidepressants.mp5.player.DemoPlayer
+
+import coil3.compose.AsyncImage
 
 @Composable
 fun SearchScreen(
@@ -40,7 +42,7 @@ fun SearchScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val scope = rememberCoroutineScope()
-    val youtubeProvider = remember { YouTubeProvider() }
+    val musicRepository = remember { MusicRepository() }
     val playlistRepository = remember { GlobalPlaylistRepository.instance }
     val playlists by playlistRepository.getAllPlaylists().collectAsState(emptyList())
 
@@ -51,7 +53,7 @@ fun SearchScreen(
     LaunchedEffect(searchQuery) {
         if (searchQuery.length >= 2) {
             showSuggestions = true
-            val result = youtubeProvider.getSuggestions(searchQuery)
+            val result = musicRepository.getSuggestions(searchQuery)
             result.fold(
                 onSuccess = { suggestions = it },
                 onFailure = { suggestions = emptyList() }
@@ -72,7 +74,7 @@ fun SearchScreen(
             isLoading = true
             errorMessage = null
 
-            val result = youtubeProvider.search(query, limit = 20)
+            val result = musicRepository.search(query)
 
             result.fold(
                 onSuccess = { tracks ->
@@ -93,8 +95,8 @@ fun SearchScreen(
     
     fun playTrack(track: Track) {
         scope.launch {
-            // Get stream URL and play
-            val streamResult = youtubeProvider.getStream(track.id)
+            // Get stream URL and play (with fallback)
+            val streamResult = musicRepository.getStream(track)
             streamResult.fold(
                 onSuccess = { streamInfo ->
                     DemoPlayer.controller.loadTrack(track, streamInfo.streamUrl)
@@ -331,20 +333,32 @@ private fun SearchResultItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Thumbnail placeholder (or image if we add Coil later)
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colors.primary.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.MusicNote,
+            // Thumbnail
+            if (track.thumbnailUrl != null) {
+                AsyncImage(
+                    model = track.thumbnailUrl,
                     contentDescription = null,
-                    tint = MaterialTheme.colors.primary,
-                    modifier = Modifier.size(28.dp)
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colors.primary.copy(alpha = 0.2f))
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colors.primary.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = MaterialTheme.colors.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.width(12.dp))

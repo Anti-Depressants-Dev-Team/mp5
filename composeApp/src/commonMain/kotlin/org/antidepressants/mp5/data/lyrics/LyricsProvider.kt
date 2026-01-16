@@ -51,18 +51,30 @@ class LyricsAggregator(
     private val providers: List<LyricsProvider>
 ) {
     suspend fun findLyrics(title: String, artist: String): Result<Lyrics> {
+        println("[LyricsAggregator] Starting search for: $title by $artist")
+        println("[LyricsAggregator] Providers count: ${providers.size}")
+        
         for (provider in providers) {
+            println("[LyricsAggregator] Trying provider: ${provider.name}")
             try {
-                if (!provider.isAvailable()) continue
+                if (!provider.isAvailable()) {
+                    println("[LyricsAggregator] ${provider.name} is not available, skipping")
+                    continue
+                }
                 
                 val result = provider.searchLyrics(title, artist)
                 if (result.isSuccess) {
+                    println("[LyricsAggregator] SUCCESS from ${provider.name}")
                     return result
+                } else {
+                    println("[LyricsAggregator] ${provider.name} returned failure: ${result.exceptionOrNull()?.message}")
                 }
             } catch (e: Exception) {
-                println("[LyricsAggregator] ${provider.name} failed: ${e.message}")
+                println("[LyricsAggregator] ${provider.name} threw exception: ${e.message}")
+                e.printStackTrace()
             }
         }
+        println("[LyricsAggregator] All providers exhausted, no lyrics found")
         return Result.failure(Exception("Lyrics not found on any provider"))
     }
 }

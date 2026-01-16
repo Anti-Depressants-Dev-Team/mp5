@@ -39,7 +39,7 @@ coil = "3.0.0-alpha06"
 
 # DI
 koin = "3.5.6"
-koinCompose = "1.1.5"
+koinCompose = "3.5.6"
 
 # Settings
 multiplatformSettings = "1.1.1"
@@ -71,7 +71,7 @@ androidx-constraintlayout = { group = "androidx.constraintlayout", name = "const
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
 
 # Compose Tooling
-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose-plugin" }
+# compose-ui-tooling removed - version conflicts with KMP Compose
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "compose-plugin" }
 
 # Media3 (ExoPlayer) - Android Audio

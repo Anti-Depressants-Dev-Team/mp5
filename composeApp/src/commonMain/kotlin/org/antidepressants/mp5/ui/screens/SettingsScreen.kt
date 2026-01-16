@@ -256,6 +256,55 @@ fun SettingsScreen(
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // Sync Button
+                        var isSyncing by remember { mutableStateOf(false) }
+                        var syncResult by remember { mutableStateOf<String?>(null) }
+                        
+                        Button(
+                            onClick = {
+                                if (isSyncing) return@Button
+                                isSyncing = true
+                                syncResult = null
+                                scope.launch {
+                                    val result = authManager.syncPlaylists()
+                                    isSyncing = false
+                                    syncResult = result.fold(
+                                        onSuccess = { count -> "Synced $count playlists!" },
+                                        onFailure = { "Sync failed: ${it.message}" }
+                                    )
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = MaterialTheme.colors.secondary,
+                                contentColor = MaterialTheme.colors.onSecondary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (isSyncing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colors.onSecondary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Syncing...")
+                            } else {
+                                Text("Sync Playlists")
+                            }
+                        }
+                        
+                        if (syncResult != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = syncResult!!,
+                                style = MaterialTheme.typography.caption,
+                                color = if (syncResult!!.startsWith("Sync failed")) MaterialTheme.colors.error else MaterialTheme.colors.primary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         OutlinedButton(
                             onClick = { authManager.signOut() },
@@ -307,34 +356,203 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // === INTEGRATIONS SECTION ===
-        SettingsSection(title = "Integrations (Coming Soon)") {
+        SettingsSection(title = "Integrations") {
+            // Discord Rich Presence
+            var isDiscordEnabled by remember { mutableStateOf(GlobalSettings.settings.isDiscordRpcEnabled) }
             SettingsSwitch(
                 title = "Discord Rich Presence",
                 subtitle = "Show what you're playing on Discord",
-                checked = false,
-                enabled = false,
-                onCheckedChange = { }
+                checked = isDiscordEnabled,
+                onCheckedChange = { 
+                    isDiscordEnabled = it
+                    GlobalSettings.settings.isDiscordRpcEnabled = it
+                }
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
+            // Last.fm Scrobbling
+            var isLastFmEnabled by remember { mutableStateOf(GlobalSettings.settings.isLastFmEnabled) }
+            var lastFmSession by remember { mutableStateOf(GlobalSettings.settings.lastFmSession ?: "") }
+            
+            // Developer Keys State
+            var showDevKeys by remember { mutableStateOf(false) }
+            var apiKey by remember { mutableStateOf(GlobalSettings.settings.lastFmApiKey ?: "") }
+            var apiSecret by remember { mutableStateOf(GlobalSettings.settings.lastFmSecret ?: "") }
+            var authStatus by remember { mutableStateOf("") }
+            var tempToken by remember { mutableStateOf("") }
+            val scope = rememberCoroutineScope()
+            // Platform URI handler for opening browser
+            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+
             SettingsSwitch(
                 title = "Last.fm Scrobbling",
                 subtitle = "Track your listening history",
-                checked = false,
-                enabled = false,
-                onCheckedChange = { }
+                checked = isLastFmEnabled,
+                onCheckedChange = { 
+                    isLastFmEnabled = it
+                    GlobalSettings.settings.isLastFmEnabled = it
+                }
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            if (isLastFmEnabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Show session if logged in
+                if (lastFmSession.isNotBlank()) {
+                    Text(
+                        "✅ Logged in (Session: ${lastFmSession.take(4)}...)",
+                        style = MaterialTheme.typography.body2,
+                        color = MaterialTheme.colors.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedButton(
+                        onClick = {
+                            lastFmSession = ""
+                            GlobalSettings.settings.lastFmSession = null
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colors.error)
+                    ) {
+                        Text("Log Out")
+                    }
+                } else {
+                    // Login UI
+                    Button(
+                        onClick = { showDevKeys = !showDevKeys },
+                        colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface)
+                    ) {
+                        Text(if (showDevKeys) "Hide Developer Keys" else "Show Developer Keys (for Login)")
+                    }
+                    
+                    if (showDevKeys) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = apiKey,
+                            onValueChange = { 
+                                apiKey = it
+                                GlobalSettings.settings.lastFmApiKey = it
+                            },
+                            label = { Text("API Key") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = apiSecret,
+                            onValueChange = { 
+                                apiSecret = it
+                                GlobalSettings.settings.lastFmSecret = it
+                            },
+                            label = { Text("Shared Secret") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+                        )
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        Button(
+                            enabled = apiKey.isNotBlank() && apiSecret.isNotBlank() && !authStatus.contains("Waiting"),
+                            onClick = {
+                                // Trigger Automated Auth Flow
+                                authStatus = "Waiting for browser login..."
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    try {
+                                        val scrobbler = org.antidepressants.mp5.data.scrobble.GlobalScrobblerManager.getLastFm()
+                                            ?: throw Exception("Last.fm scrobbler not found")
+                                            
+                                        // Set keys first
+                                        scrobbler.authenticate(apiKey, apiSecret)
+                                        
+                                        // Run automated login
+                                        val loginResult = scrobbler.login()
+                                        
+                                        if (loginResult.isSuccess) {
+                                            val sessionKey = loginResult.getOrThrow()
+                                            
+                                            // Store persistent
+                                            GlobalSettings.settings.lastFmSession = sessionKey
+                                            // Update local UI
+                                            lastFmSession = sessionKey
+                                            
+                                            authStatus = "Success! Session saved."
+                                            showDevKeys = false
+                                        } else {
+                                            authStatus = "Error: ${loginResult.exceptionOrNull()?.message}"
+                                        }
+                                    } catch (e: Exception) {
+                                        authStatus = "Error: ${e.message}"
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (authStatus.contains("Waiting")) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = MaterialTheme.colors.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Check Browser...")
+                            } else {
+                                Text("Log in with Browser")
+                            }
+                        }
+                        
+
+                        
+                        // Fallback Toggle
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                            TextButton(onClick = { authStatus = "Switching to manual..."; showDevKeys = !showDevKeys /* toggle hack to reset */ }) {
+                                Text("Having trouble? Try Manual Login", style = MaterialTheme.typography.caption)
+                            }
+                        }
+                        
+                        Text(authStatus, style = MaterialTheme.typography.caption)
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // ListenBrainz
+            var isListenBrainzEnabled by remember { mutableStateOf(GlobalSettings.settings.isListenBrainzEnabled) }
+            var listenBrainzToken by remember { mutableStateOf(GlobalSettings.settings.listenBrainzToken ?: "") }
             
             SettingsSwitch(
                 title = "ListenBrainz",
                 subtitle = "Open-source music tracking",
-                checked = false,
-                enabled = false,
-                onCheckedChange = { }
+                checked = isListenBrainzEnabled,
+                onCheckedChange = { 
+                    isListenBrainzEnabled = it
+                    GlobalSettings.settings.isListenBrainzEnabled = it
+                }
             )
+            
+            if (isListenBrainzEnabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = listenBrainzToken,
+                    onValueChange = { 
+                        listenBrainzToken = it
+                        GlobalSettings.settings.listenBrainzToken = it.ifBlank { null }
+                    },
+                    label = { Text("ListenBrainz User Token") },
+                    placeholder = { Text("Paste your user token") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        focusedBorderColor = MaterialTheme.colors.primary,
+                        cursorColor = MaterialTheme.colors.primary
+                    )
+                )
+                Text(
+                    "Get token: https://listenbrainz.org/settings/",
+                    style = MaterialTheme.typography.caption,
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.5f)
+                )
+            }
         }
         
         Spacer(modifier = Modifier.height(32.dp))

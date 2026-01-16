@@ -6,26 +6,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
 import org.antidepressants.mp5.player.DemoPlayer
 import org.antidepressants.mp5.player.PlaybackState
 import org.antidepressants.mp5.player.RepeatMode
 import org.antidepressants.mp5.settings.GlobalSettings
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.foundation.shape.CircleShape
 
-/**
- * YouTube-style player bar layout:
- * LEFT: Playback controls (prev, play/pause, next)
- * CENTER: Track info + progress bar
- * RIGHT: Volume, repeat, shuffle, volume boost
- */
 @Composable
 fun PsychopathPlayer(
     modifier: Modifier = Modifier
@@ -34,21 +34,70 @@ fun PsychopathPlayer(
     val settingsState by GlobalSettings.settings.state.collectAsState()
     val isPlaying = playerState.playbackState == PlaybackState.PLAYING
     
-    // Local state for volume popup
-    var showVolumePopup by remember { mutableStateOf(false) }
+    // Local state for volume
     var volumeBoost by remember { mutableStateOf(settingsState.volumeBoost) }
+    var showLyrics by remember { mutableStateOf(false) }
     
     // Calculate progress (0.0 to 1.0)
     val progress = if (playerState.duration > 0) {
         playerState.currentPosition.toFloat() / playerState.duration.toFloat()
     } else 0f
     
+    // Lyrics Overlay/Popup
+    if (showLyrics) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showLyrics = false }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f) // 90% width
+                    .height(500.dp) // Fixed height
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colors.surface.copy(alpha = 0.95f))
+                    .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            ) {
+                LyricsView(
+                    lyrics = playerState.currentLyrics,
+                    currentPosition = playerState.currentPosition,
+                    isLoading = playerState.isLoadingLyrics,
+                    modifier = Modifier.fillMaxSize()
+                )
+                
+                // Close button
+                IconButton(
+                    onClick = { showLyrics = false },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+                ) {
+                    Icon(Icons.Default.Close, "Close", tint = MaterialTheme.colors.onSurface)
+                }
+            }
+        }
+    }
+    
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(72.dp)
-            .background(MaterialTheme.colors.surface)
-            .padding(horizontal = 12.dp),
+            .height(80.dp) // More height for glass
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colors.surface.copy(alpha = 0.85f),
+                        MaterialTheme.colors.surface.copy(alpha = 0.65f)
+                    )
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.4f),
+                        Color.White.copy(alpha = 0.1f)
+                    )
+                ),
+                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+            )
+            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // === LEFT: Playback Controls ===
@@ -162,101 +211,11 @@ fun PsychopathPlayer(
         
         // === RIGHT: Volume, Repeat, Shuffle, Volume Boost ===
         Row(
-            modifier = Modifier.width(180.dp),
-            horizontalArrangement = Arrangement.End,
+            modifier = Modifier.width(280.dp), // More width for buttons
+            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Shuffle button
-            IconButton(
-                onClick = { DemoPlayer.controller.toggleShuffle() },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    Icons.Default.Shuffle,
-                    "Shuffle",
-                    tint = if (playerState.isShuffleEnabled) 
-                        MaterialTheme.colors.primary 
-                    else 
-                        MaterialTheme.colors.onSurface.copy(alpha = 0.5f),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            
-            // Repeat button
-            IconButton(
-                onClick = { DemoPlayer.controller.cycleRepeatMode() },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    when (playerState.repeatMode) {
-                        RepeatMode.ONE -> Icons.Default.RepeatOne
-                        else -> Icons.Default.Repeat
-                    },
-                    "Repeat",
-                    tint = if (playerState.repeatMode != RepeatMode.OFF) 
-                        MaterialTheme.colors.primary 
-                    else 
-                        MaterialTheme.colors.onSurface.copy(alpha = 0.5f),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-            
-            // Volume button with Popup
-            Box {
-                IconButton(
-                    onClick = { showVolumePopup = !showVolumePopup },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        when {
-                            playerState.volumeLevel == 0f -> Icons.Default.VolumeOff
-                            playerState.volumeLevel < 0.5f -> Icons.Default.VolumeDown
-                            else -> Icons.Default.VolumeUp
-                        },
-                        "Volume",
-                        tint = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                if (showVolumePopup) {
-                    Popup(
-                        alignment = Alignment.TopCenter,
-                        onDismissRequest = { showVolumePopup = false }
-                    ) {
-                        Surface(
-                            elevation = 4.dp,
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colors.surface,
-                            modifier = Modifier
-                                .padding(bottom = 12.dp)
-                                .offset(y = (-150).dp) // Move up above the button
-                                .width(48.dp)
-                                .height(140.dp)
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Slider(
-                                    value = playerState.volumeLevel,
-                                    onValueChange = { DemoPlayer.controller.setVolume(it) },
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = MaterialTheme.colors.primary,
-                                        activeTrackColor = MaterialTheme.colors.primary,
-                                        inactiveTrackColor = MaterialTheme.colors.onSurface.copy(alpha = 0.2f)
-                                    ),
-                                    modifier = Modifier
-                                        .width(120.dp)
-                                        .rotate(-90f)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Volume Boost button (quick access!)
+             // Volume Boost button (quick access!) - moved to left of group for better flow
             Box {
                 IconButton(
                     onClick = {
@@ -275,7 +234,7 @@ fun PsychopathPlayer(
                             MaterialTheme.colors.primary 
                         else 
                             MaterialTheme.colors.onSurface.copy(alpha = 0.5f),
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 
@@ -290,6 +249,116 @@ fun PsychopathPlayer(
                             .offset(x = 4.dp, y = 4.dp)
                     )
                 }
+            }
+
+            // Shuffle button
+            IconButton(
+                onClick = { DemoPlayer.controller.toggleShuffle() },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    Icons.Default.Shuffle,
+                    "Shuffle",
+                    tint = if (playerState.isShuffleEnabled) 
+                        MaterialTheme.colors.primary 
+                    else 
+                        MaterialTheme.colors.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            
+            // Repeat button
+            IconButton(
+                onClick = { DemoPlayer.controller.cycleRepeatMode() },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    when (playerState.repeatMode) {
+                        RepeatMode.ONE -> Icons.Default.RepeatOne
+                        else -> Icons.Default.Repeat
+                    },
+                    "Repeat",
+                    tint = if (playerState.repeatMode != RepeatMode.OFF) 
+                        MaterialTheme.colors.primary 
+                    else 
+                        MaterialTheme.colors.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            
+            // Lyrics Button
+            IconButton(
+                onClick = { showLyrics = !showLyrics },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    Icons.Default.Mic, // Or TextSnippet
+                    "Lyrics",
+                    tint = if (showLyrics) 
+                        MaterialTheme.colors.primary 
+                    else 
+                        MaterialTheme.colors.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            // Inline Volume Control
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .height(32.dp)
+                    .background(
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.05f),
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .padding(horizontal = 8.dp)
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.scrollDelta.y != 0f }
+                                if (change != null) {
+                                    val delta = change.scrollDelta
+                                    // Scroll down (positive y) -> decrease volume
+                                    // Scroll up (negative y) -> increase volume
+                                    val adjustment = if (delta.y > 0) -0.05f else 0.05f
+                                    val newVolume = (playerState.volumeLevel + adjustment).coerceIn(0f, 1f)
+                                    DemoPlayer.controller.setVolume(newVolume)
+                                    change.consume()
+                                }
+                            }
+                        }
+                    }
+            ) {
+                // Click to mute/unmute could be added here
+                Icon(
+                    when {
+                        playerState.volumeLevel == 0f -> Icons.Default.VolumeOff
+                        playerState.volumeLevel < 0.5f -> Icons.Default.VolumeDown
+                        else -> Icons.Default.VolumeUp
+                    },
+                    "Volume",
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.size(16.dp).clickable {
+                        // Simple mute toggle logic could go here
+                        if (playerState.volumeLevel > 0) DemoPlayer.controller.setVolume(0f) else DemoPlayer.controller.setVolume(1f)
+                    }
+                )
+                
+                Spacer(modifier = Modifier.width(6.dp))
+                
+                Slider(
+                    value = playerState.volumeLevel,
+                    onValueChange = { DemoPlayer.controller.setVolume(it) },
+                    modifier = Modifier.width(80.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colors.primary,
+                        activeTrackColor = MaterialTheme.colors.primary,
+                        inactiveTrackColor = MaterialTheme.colors.onSurface.copy(alpha = 0.2f)
+                    )
+                )
             }
         }
     }

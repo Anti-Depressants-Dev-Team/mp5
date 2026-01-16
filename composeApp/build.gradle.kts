@@ -110,7 +110,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
     dependencies {
-        debugImplementation(libs.compose.ui.tooling)
+        // debugImplementation(libs.compose.ui.tooling) // Causing version conflicts with KMP Compose
     }
 }
 

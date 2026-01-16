@@ -16,7 +16,9 @@ data class SettingsState(
     val volumeBoost: Int = 100,
     val isLastFmEnabled: Boolean = false,
     val isListenBrainzEnabled: Boolean = false,
-    val isDiscordRpcEnabled: Boolean = false
+    val isDiscordRpcEnabled: Boolean = false,
+    val lastFmSession: String? = null,
+    val listenBrainzToken: String? = null
 )
 
 /**
@@ -35,6 +37,12 @@ class AppSettings(
         private const val KEY_LASTFM_ENABLED = "lastFmEnabled"
         private const val KEY_LISTENBRAINZ_ENABLED = "listenBrainzEnabled"
         private const val KEY_DISCORD_RPC_ENABLED = "discordRpcEnabled"
+        private const val KEY_LAST_VOLUME = "lastVolume"
+        private const val KEY_LAST_TRACK = "lastTrack"
+        private const val KEY_LASTFM_SESSION = "lastFmSession"
+        private const val KEY_LASTFM_API_KEY = "lastFmApiKey"
+        private const val KEY_LASTFM_SECRET = "lastFmSecret"
+        private const val KEY_LISTENBRAINZ_TOKEN = "listenBrainzToken"
         
         // Default purple accent: 0xFF9C27B0
         private const val DEFAULT_ACCENT_COLOR = 0xFF9C27B0L
@@ -52,9 +60,55 @@ class AppSettings(
             volumeBoost = settings.getInt(KEY_VOLUME_BOOST, defaultValue = 100),
             isLastFmEnabled = settings.getBoolean(KEY_LASTFM_ENABLED, defaultValue = false),
             isListenBrainzEnabled = settings.getBoolean(KEY_LISTENBRAINZ_ENABLED, defaultValue = false),
-            isDiscordRpcEnabled = settings.getBoolean(KEY_DISCORD_RPC_ENABLED, defaultValue = false)
+            isDiscordRpcEnabled = settings.getBoolean(KEY_DISCORD_RPC_ENABLED, defaultValue = false),
+            lastFmSession = settings.getStringOrNull(KEY_LASTFM_SESSION),
+            listenBrainzToken = settings.getStringOrNull(KEY_LISTENBRAINZ_TOKEN)
         )
     }
+
+    // ... (existing properties)
+
+    /**
+     * Last.fm session key for authenticated API calls.
+     */
+    var lastFmSession: String?
+        get() = _state.value.lastFmSession
+        set(value) {
+            if (value == null) settings.remove(KEY_LASTFM_SESSION)
+            else settings.putString(KEY_LASTFM_SESSION, value)
+            _state.update { it.copy(lastFmSession = value) }
+        }
+
+    /**
+     * Last.fm API Key (Developer Key).
+     */
+    var lastFmApiKey: String?
+        get() = settings.getStringOrNull(KEY_LASTFM_API_KEY)
+        set(value) {
+            if (value == null) settings.remove(KEY_LASTFM_API_KEY)
+            else settings.putString(KEY_LASTFM_API_KEY, value)
+        }
+
+    /**
+     * Last.fm Secret (Developer Secret).
+     */
+    var lastFmSecret: String?
+        get() = settings.getStringOrNull(KEY_LASTFM_SECRET)
+        set(value) {
+            if (value == null) settings.remove(KEY_LASTFM_SECRET)
+            else settings.putString(KEY_LASTFM_SECRET, value)
+        }
+
+    /**
+     * ListenBrainz user token for API calls.
+     */
+    var listenBrainzToken: String?
+        get() = _state.value.listenBrainzToken
+        set(value) {
+            if (value == null) settings.remove(KEY_LISTENBRAINZ_TOKEN)
+            else settings.putString(KEY_LISTENBRAINZ_TOKEN, value)
+            _state.update { it.copy(listenBrainzToken = value) }
+        }
     
     /**
      * "Psychopath" mode: Player bar at the TOP of the screen.
@@ -130,6 +184,30 @@ class AppSettings(
             settings.putBoolean(KEY_DISCORD_RPC_ENABLED, value)
             _state.update { it.copy(isDiscordRpcEnabled = value) }
         }
+
+    /**
+     * Last volume level (0.0 - 1.0).
+     */
+    var lastVolume: Float
+        get() = settings.getFloat(KEY_LAST_VOLUME, defaultValue = 1.0f)
+        set(value) {
+            settings.putFloat(KEY_LAST_VOLUME, value)
+        }
+
+    /**
+     * Last played track encoded as JSON.
+     */
+    var lastTrackJson: String?
+        get() = settings.getStringOrNull(KEY_LAST_TRACK)
+        set(value) {
+            if (value == null) {
+                settings.remove(KEY_LAST_TRACK)
+            } else {
+                settings.putString(KEY_LAST_TRACK, value)
+            }
+        }
+
+
     
     /**
      * Clear all settings.
