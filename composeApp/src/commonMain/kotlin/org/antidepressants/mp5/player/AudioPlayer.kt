@@ -20,6 +20,8 @@ enum class PlaybackState {
  */
 data class PlayerState(
     val currentTrack: Track? = null,
+    val currentPlaylist: List<Track> = emptyList(),
+    val currentTrackIndex: Int = -1,
     val playbackState: PlaybackState = PlaybackState.IDLE,
     val currentPosition: Long = 0L, // in milliseconds
     val duration: Long = 0L, // in milliseconds
