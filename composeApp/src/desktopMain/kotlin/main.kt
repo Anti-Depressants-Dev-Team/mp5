@@ -66,8 +66,8 @@ fun main() = application {
         DemoPlayer.controller.playerState.collect { state ->
             val track = state.currentTrack
             
-            // Discord RPC Update
-            discordManager.updatePresence(track, state.playbackState, state.currentPosition)
+            // Discord RPC Update (with thumbnail and progress bar)
+            discordManager.updatePresence(track, state.playbackState, state.currentPosition, state.duration)
             
             // Scrobble Updates
             if (track != null) {
@@ -95,6 +95,7 @@ fun main() = application {
         }
     }
     
+
     Window(
         onCloseRequest = {
             // Cleanup on close

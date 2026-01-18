@@ -19,13 +19,14 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.ServerSocket
 import java.net.URI
+import org.antidepressants.mp5.data.secrets.Secrets
 
 class DesktopGoogleAuth {
     
     companion object {
-        // PLACEHOLDERS - User needs to populate these
-        private const val CLIENT_ID = "968911856530-d2u7lp3npgcufjmp60mo8hknaluvdacn.apps.googleusercontent.com"
-        private const val CLIENT_SECRET = "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"
+        // PLACEHOLDERS - Populated from Secrets.kt
+        private const val CLIENT_ID = Secrets.GOOGLE_CLIENT_ID
+        private const val CLIENT_SECRET = Secrets.GOOGLE_CLIENT_SECRET
         private const val REDIRECT_URI = "http://localhost:54321/callback"
         private const val PORT = 54321
         private const val SCOPE = "email profile https://www.googleapis.com/auth/youtube.readonly"

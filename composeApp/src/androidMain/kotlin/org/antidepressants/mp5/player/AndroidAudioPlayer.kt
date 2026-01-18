@@ -1,10 +1,15 @@
 package org.antidepressants.mp5.player
 
 import android.content.Context
+import android.os.PowerManager
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,9 +22,31 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.antidepressants.mp5.domain.model.Track
 
+@OptIn(UnstableApi::class)
 class AndroidAudioPlayer(context: Context) : AudioPlayer {
     
-    private val exoPlayer: ExoPlayer = ExoPlayer.Builder(context).build()
+    // Configure larger buffer for streaming stability (especially on emulator)
+    private val loadControl = DefaultLoadControl.Builder()
+        .setBufferDurationsMs(
+            30_000,  // Min buffer (30 seconds)
+            60_000,  // Max buffer (60 seconds)  
+            2_500,   // Buffer for playback (2.5s)
+            5_000    // Buffer for playback after rebuffer (5s)
+        )
+        .build()
+    
+    // Audio attributes for music playback
+    private val audioAttributes = AudioAttributes.Builder()
+        .setUsage(C.USAGE_MEDIA)
+        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+        .build()
+    
+    private val exoPlayer: ExoPlayer = ExoPlayer.Builder(context)
+        .setLoadControl(loadControl)
+        .setAudioAttributes(audioAttributes, true)  // true = handle audio focus
+        .setWakeMode(C.WAKE_MODE_NETWORK)  // Keep CPU/WiFi awake during playback
+        .build()
+    
     private val scope = CoroutineScope(Dispatchers.Main)
     
     private val _playerState = MutableStateFlow(PlayerState())
@@ -53,6 +80,14 @@ class AndroidAudioPlayer(context: Context) : AudioPlayer {
                     stopPositionUpdates()
                 }
             }
+            
+            override fun onPlayerError(error: PlaybackException) {
+                android.util.Log.e("AndroidAudioPlayer", "Playback error: ${error.message}", error)
+                _playerState.update { it.copy(
+                    playbackState = PlaybackState.ERROR,
+                    errorMessage = "Playback error: ${error.message}"
+                ) }
+            }
         })
     }
     
@@ -83,10 +118,21 @@ class AndroidAudioPlayer(context: Context) : AudioPlayer {
             currentPosition = 0L
         ) }
         
-        val mediaItem = MediaItem.fromUri(streamUrl)
-        exoPlayer.setMediaItem(mediaItem)
-        exoPlayer.prepare()
-        exoPlayer.play()
+        // ExoPlayer requires main thread access!
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            try {
+                val mediaItem = MediaItem.fromUri(streamUrl)
+                exoPlayer.setMediaItem(mediaItem)
+                exoPlayer.prepare()
+                exoPlayer.play()
+            } catch (e: Exception) {
+                android.util.Log.e("AndroidAudioPlayer", "Error loading: ${e.message}", e)
+                _playerState.update { it.copy(
+                    playbackState = PlaybackState.ERROR,
+                    errorMessage = "Failed to play: ${e.message}"
+                ) }
+            }
+        }
     }
     
     override fun play() {

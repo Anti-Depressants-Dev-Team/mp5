@@ -43,6 +43,7 @@ class AppSettings(
         private const val KEY_LASTFM_API_KEY = "lastFmApiKey"
         private const val KEY_LASTFM_SECRET = "lastFmSecret"
         private const val KEY_LISTENBRAINZ_TOKEN = "listenBrainzToken"
+        private const val KEY_PLAY_HISTORY = "playHistory"
         
         // Default purple accent: 0xFF9C27B0
         private const val DEFAULT_ACCENT_COLOR = 0xFF9C27B0L
@@ -204,6 +205,19 @@ class AppSettings(
                 settings.remove(KEY_LAST_TRACK)
             } else {
                 settings.putString(KEY_LAST_TRACK, value)
+            }
+        }
+    
+    /**
+     * Play history (JSON encoded list of played tracks).
+     */
+    var playHistory: String?
+        get() = settings.getStringOrNull(KEY_PLAY_HISTORY)
+        set(value) {
+            if (value == null) {
+                settings.remove(KEY_PLAY_HISTORY)
+            } else {
+                settings.putString(KEY_PLAY_HISTORY, value)
             }
         }
 

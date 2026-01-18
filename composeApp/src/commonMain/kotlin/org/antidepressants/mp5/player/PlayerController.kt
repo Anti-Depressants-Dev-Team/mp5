@@ -127,6 +127,9 @@ class PlayerController {
             } catch (e: Exception) {
                 println("[PlayerController] Failed to save track state: ${e.message}")
             }
+            
+            // Record to play history for "Play Again" feature
+            org.antidepressants.mp5.data.history.PlayHistory.recordPlay(track)
 
             // Reset lyrics
              _playerState.update { it.copy(currentLyrics = null) }
@@ -163,6 +166,37 @@ class PlayerController {
                 it.copy(playbackState = PlaybackState.PLAYING)
             }
         }
+    }
+    
+    /**
+     * Play a track by fetching its stream URL first.
+     * Used by "Play Again" feature to replay history entries.
+     */
+    suspend fun playTrack(track: Track) {
+        println("[PlayerController] playTrack: ${track.title}")
+        
+        // Set loading state
+        _playerState.update { it.copy(currentTrack = track, playbackState = PlaybackState.LOADING) }
+        
+        // Fetch stream URL from provider
+        val provider = org.antidepressants.mp5.data.provider.GlobalProvider.provider
+        val streamResult = provider.getStream(track.id)
+        
+        streamResult.fold(
+            onSuccess = { streamInfo ->
+                println("[PlayerController] Got stream URL, loading...")
+                loadTrack(track, streamInfo.streamUrl, autoPlay = true)
+            },
+            onFailure = { error ->
+                println("[PlayerController] Failed to get stream: ${error.message}")
+                _playerState.update { 
+                    it.copy(
+                        playbackState = PlaybackState.ERROR,
+                        errorMessage = "Failed to get stream: ${error.message}"
+                    )
+                }
+            }
+        )
     }
     
     fun pause() {

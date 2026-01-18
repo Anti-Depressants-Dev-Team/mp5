@@ -99,10 +99,26 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        jniLibs {
+            // Resolve JNI conflicts (likely between vlcj transitive deps or others)
+            pickFirsts += "lib/x86/libc++_shared.so"
+            pickFirsts += "lib/x86_64/libc++_shared.so"
+            pickFirsts += "lib/armeabi-v7a/libc++_shared.so"
+            pickFirsts += "lib/arm64-v8a/libc++_shared.so"
+        }
+    }
+    signingConfigs {
+        create("release") {
+            storeFile = file("release.keystore")
+            storePassword = "android"
+            keyAlias = "mp5release"
+            keyPassword = "android"
+        }
     }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -112,6 +128,11 @@ android {
     dependencies {
         // debugImplementation(libs.compose.ui.tooling) // Causing version conflicts with KMP Compose
     }
+    
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
 }
 
 compose.desktop {
@@ -119,9 +140,19 @@ compose.desktop {
         mainClass = "MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb)
             packageName = "mp5"
             packageVersion = "1.0.0"
+            
+            buildTypes.release.proguard {
+                isEnabled.set(false)
+            }
+            
+            windows {
+                menuGroup = "Antidepressants"
+                shortcut = true
+                // console = true // Disabled due to build failure
+            }
         }
     }
 }

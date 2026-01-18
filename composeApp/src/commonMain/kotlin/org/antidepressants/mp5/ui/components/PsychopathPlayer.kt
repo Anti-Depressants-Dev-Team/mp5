@@ -74,10 +74,10 @@ fun PsychopathPlayer(
         }
     }
     
-    Row(
+    // Use BoxWithConstraints to detect screen width
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .height(80.dp) // More height for glass
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
@@ -97,9 +97,120 @@ fun PsychopathPlayer(
                 shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
             )
             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
+        val isCompactScreen = maxWidth < 600.dp
+        
+        if (isCompactScreen) {
+            // === MOBILE LAYOUT: Vertical stacked ===
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                // ROW 1: Playback controls centered
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { DemoPlayer.controller.previous() },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(Icons.Default.SkipPrevious, "Previous", tint = MaterialTheme.colors.onSurface)
+                    }
+                    
+                    IconButton(
+                        onClick = { DemoPlayer.controller.togglePlayPause() },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            if (isPlaying) "Pause" else "Play",
+                            tint = MaterialTheme.colors.primary,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                    
+                    IconButton(
+                        onClick = { DemoPlayer.controller.next() },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(Icons.Default.SkipNext, "Next", tint = MaterialTheme.colors.onSurface)
+                    }
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    // Shuffle
+                    IconButton(onClick = { DemoPlayer.controller.toggleShuffle() }, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Default.Shuffle, "Shuffle",
+                            tint = if (playerState.isShuffleEnabled) MaterialTheme.colors.primary 
+                                   else MaterialTheme.colors.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                    
+                    // Repeat
+                    IconButton(onClick = { DemoPlayer.controller.cycleRepeatMode() }, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Default.Repeat, "Repeat",
+                            tint = if (playerState.repeatMode != RepeatMode.OFF) MaterialTheme.colors.primary 
+                                   else MaterialTheme.colors.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                    
+                    // Volume slider compact
+                    Slider(
+                        value = playerState.volumeLevel,
+                        onValueChange = { DemoPlayer.controller.setVolume(it) },
+                        modifier = Modifier.width(80.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colors.primary,
+                            activeTrackColor = MaterialTheme.colors.primary
+                        )
+                    )
+                }
+                
+                // ROW 2: Progress bar full width
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatTime(playerState.currentPosition),
+                        style = MaterialTheme.typography.caption,
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                    )
+                    
+                    Slider(
+                        value = progress,
+                        onValueChange = { DemoPlayer.controller.seekTo(it) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 8.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colors.primary,
+                            activeTrackColor = MaterialTheme.colors.primary,
+                            inactiveTrackColor = MaterialTheme.colors.onSurface.copy(alpha = 0.2f)
+                        )
+                    )
+                    
+                    Text(
+                        text = formatTime(playerState.duration),
+                        style = MaterialTheme.typography.caption,
+                        color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        } else {
+            // === DESKTOP LAYOUT: Horizontal Row (original) ===
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
         // === LEFT: Playback Controls ===
         Row(
             modifier = Modifier.width(140.dp),
@@ -361,6 +472,8 @@ fun PsychopathPlayer(
                 )
             }
         }
+    }
+}
     }
 }
 

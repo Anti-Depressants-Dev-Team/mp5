@@ -26,10 +26,10 @@ Warning: SDK processing. This version only understands SDK XML versions up to 3 
 > Task :composeApp:parseDebugLocalResources UP-TO-DATE
 > Task :composeApp:createDebugCompatibleScreenManifests UP-TO-DATE
 > Task :composeApp:extractDeepLinksDebug UP-TO-DATE
-> Task :composeApp:processDebugMainManifest UP-TO-DATE
-> Task :composeApp:processDebugManifest UP-TO-DATE
-> Task :composeApp:processDebugManifestForPackage UP-TO-DATE
-> Task :composeApp:processDebugResources UP-TO-DATE
+> Task :composeApp:processDebugMainManifest
+> Task :composeApp:processDebugManifest
+> Task :composeApp:processDebugManifestForPackage
+> Task :composeApp:processDebugResources
 
 > Task :composeApp:compileDebugKotlinAndroid
 w: file:///C:/Users/razva/Documents/GitHub/Antidepresents/mp5/composeApp/src/androidMain/kotlin/org/antidepressants/mp5/data/repository/GlobalPlaylistRepository.android.kt:10:1 'expect'/'actual' classes (including interfaces, objects, annotations, enums, and 'actual' typealiases) are in Beta. You can use -Xexpect-actual-classes flag to suppress this warning. Also see: https://youtrack.jetbrains.com/issue/KT-61573
@@ -41,6 +41,7 @@ w: file:///C:/Users/razva/Documents/GitHub/Antidepresents/mp5/composeApp/src/com
 w: file:///C:/Users/razva/Documents/GitHub/Antidepresents/mp5/composeApp/src/commonMain/kotlin/org/antidepressants/mp5/ui/screens/AccountScreen.kt:247:31 '@property:Deprecated(...) val Icons.Filled.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ExitToApp.
 w: file:///C:/Users/razva/Documents/GitHub/Antidepresents/mp5/composeApp/src/commonMain/kotlin/org/antidepressants/mp5/ui/screens/PlaylistScreen.kt:464:39 '@property:Deprecated(...) val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
 w: file:///C:/Users/razva/Documents/GitHub/Antidepresents/mp5/composeApp/src/commonMain/kotlin/org/antidepressants/mp5/ui/screens/SearchScreen.kt:394:35 '@property:Deprecated(...) val Icons.Filled.PlaylistAdd: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.PlaylistAdd.
+w: file:///C:/Users/razva/Documents/GitHub/Antidepresents/mp5/composeApp/src/commonMain/kotlin/org/antidepressants/mp5/ui/shell/AppWindow.kt:266:44 This is a delicate API and its use requires care. Make sure you fully read and understand documentation of the declaration that is marked as a delicate API.
 
 Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
 
@@ -48,5 +49,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 17s
-14 actionable tasks: 1 executed, 13 up-to-date
+BUILD SUCCESSFUL in 48s
+14 actionable tasks: 5 executed, 9 up-to-date

@@ -76,23 +76,41 @@ class DiscordRpcManager {
         }
     }
     
-    fun updatePresence(track: Track?, playbackState: PlaybackState, positionMs: Long = 0) {
+    fun updatePresence(track: Track?, playbackState: PlaybackState, positionMs: Long = 0, durationMs: Long = 0) {
         scope.launch {
             try {
                 if (!connected && !connect()) return@launch
                 
                 val activity = if (track != null && playbackState == PlaybackState.PLAYING) {
+                    val startTime = System.currentTimeMillis() - positionMs
+                    val endTime = if (durationMs > 0) startTime + durationMs else null
+                    
                     Activity(
                         details = track.title.take(128),
                         state = "by ${track.artist}".take(128),
-                        timestamps = ActivityTimestamps(start = System.currentTimeMillis() - positionMs),
-                        type = 0
+                        timestamps = ActivityTimestamps(
+                            start = startTime,
+                            end = endTime  // This enables the progress bar!
+                        ),
+                        assets = ActivityAssets(
+                            largeImage = track.thumbnailUrl ?: "psychopath_icon",  // Use thumbnail or app icon
+                            largeText = track.album ?: track.title,
+                            smallImage = "play_icon",  // Small play indicator
+                            smallText = "Playing"
+                        ),
+                        type = 2  // 2 = Listening activity (shows "Listening to")
                     )
                 } else if (track != null && playbackState == PlaybackState.PAUSED) {
                     Activity(
                         details = track.title.take(128),
                         state = "by ${track.artist} (Paused)".take(128),
-                        type = 0
+                        assets = ActivityAssets(
+                            largeImage = track.thumbnailUrl ?: "psychopath_icon",
+                            largeText = track.album ?: track.title,
+                            smallImage = "pause_icon",
+                            smallText = "Paused"
+                        ),
+                        type = 2
                     )
                 } else null
                 

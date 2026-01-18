@@ -27,6 +27,14 @@ class MainActivity : ComponentActivity() {
         // Wire audio player to the demo controller
         audioPlayer?.let { player ->
             org.antidepressants.mp5.player.DemoPlayer.controller.setAudioPlayer(player)
+            
+            // Start the music playback service for notification controls
+            val serviceIntent = android.content.Intent(this, org.antidepressants.mp5.service.MusicPlaybackService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
         }
         
         // Initialize Scrobblers

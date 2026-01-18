@@ -3,6 +3,8 @@
 *.aar
 *.ap_
 *.aab
+*.exe
+*.msi
 
 # Files for the ART/Dalvik VM
 *.dex
@@ -80,4 +82,16 @@ build_error.log
 build_error_2.log
 build_stacktrace.log
 build_oauth_error.log
-build_auth_error_3.log
+# Secrets
+Secrets.kt
+**/data/secrets/Secrets.kt
+
+# Build Debug Logs & Heap Dumps
+*.hprof
+windows_build_*.txt
+android_*.txt
+desktop_*.txt
+build_*.txt
+app_image_debug.txt
+final_app_image_build.txt
+gradle_tasks.txt
